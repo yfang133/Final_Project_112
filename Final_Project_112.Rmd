@@ -1,30 +1,104 @@
 ---
 title: "Final_Project_112"
-output: html_document
+author: "Daniel Fang, Bella Ding"
+output: 
+  html_document:
+    keep_md: TRUE
+    toc: TRUE
+    toc_float: TRUE
+    df_print: paged
+    code_download: false
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+#knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+```{r  message=FALSE}
+library(tidyr)
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(ggthemes)
+library(tidyverse)     # for data cleaning and plotting
+library(lubridate)     # for date manipulation
+library(openintro)     # for the abbr2state() function
+library(palmerpenguins)# for Palmer penguin data
+library(maps)          # for map data
+library(ggmap)         # for mapping points on maps
+library(gplots)        # for col2hex() function
+library(RColorBrewer)  # for color palettes
+library(sf)            # for working with spatial data
+library(leaflet)       # for highly customizable mapping
+```
+```{r message=FALSE}
+vtr_sc_2005 <- read_csv("2005.csv") %>% mutate(year = 2005)
+vtr_sc_2006 <- read_csv("2005.csv") %>% mutate(year = 2006)
+vtr_sc_2007 <- read_csv("2007.csv") %>% mutate(year = 2007)
+vtr_sc_2008 <- read_csv("2008.csv") %>% mutate(year = 2008)
+vtr_sc_2009 <- read_csv("2009.csv") %>% mutate(year = 2009)
+vtr_sc_2010 <- read_csv("2010.csv") %>% mutate(year = 2010)
+vtr_sc_2011 <- read_csv("2011.csv") %>% mutate(year = 2011)
+```
+ 
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+general_vtr <- rbind(vtr_sc_2005, vtr_sc_2006, vtr_sc_2007, vtr_sc_2008, vtr_sc_2009, vtr_sc_2010, vtr_sc_2011) %>% 
+  pivot_longer(cols = c(vet_males, vet_females), names_to = "sex", values_to = "num_vet") %>% 
+  mutate(sex = ifelse(sex == "vet_males", "M", "F"))
+general_vtr
 ```
 
-## Including Plots
+```{r}
+general_vtr%>%
+    mutate(across(where(is.character), as.factor)) %>% 
+    mutate(state = ifelse(as.character(state) == "Florida*", "Florida", as.character(state)))
 
-You can also embed plots, for example:
+general_vtr
 
-```{r pressure, echo=FALSE}
-plot(pressure)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
-YO WTF
+
+```{r}
+general_vtr %>% 
+  ggplot(aes(x = sex, y = num_vet))+
+  labs(x = "Sex", y = "Number of Veteran Suicides", title = "Number of Veteran Suicides by Gender")+
+  theme_igray()+
+    geom_col()
+```
+
+```{r}
+states_map <- map_data("state")
+
+general_vtr %>%
+  filter(year == "2011")%>%
+  mutate(state = str_to_lower(state)) %>%
+  ggplot(aes()) +
+  geom_map(aes(map_id = state, 
+               fill = vet_suicides), 
+           map = states_map)+
+  expand_limits(x = states_map$long, y = states_map$lat)+
+  scale_fill_gradient2()+
+  theme_map()+
+  theme(legend.background =  element_blank())+
+  labs(title = "Total Number of Veteran Suicide Cases by State in 2011", fill = "Cases")
+
+```
+
+```{r}
+general_vtr %>%
+  mutate(state = str_to_lower(state), percentage = (vet_suicides/vet_pop)*10000) %>%
+  ggplot(aes()) +
+  geom_map(aes(map_id = state, 
+               fill = percentage), 
+           map = states_map)+
+  expand_limits(x = states_map$long, y = states_map$lat)+
+  scale_fill_gradient2()+
+  theme_map()+
+  theme(legend.background =  element_blank())+
+  labs(title = "Percentage of Veteran Suicides in Total Veteran Population in the U.S.", fill = "%")
+
+```
+
